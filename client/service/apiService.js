@@ -1,6 +1,6 @@
 
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://foodsense-tawy.onrender.com/api';
 
 export const fetchProducts = async () => {
   try {

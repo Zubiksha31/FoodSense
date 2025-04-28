@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchProducts, addProduct, deleteProduct } from '../service/apiService';
+import { fetchProducts, addProduct, deleteProduct } from '../service/apiService'; 
 
 const ProductTracker = () => {
   const [parsedText, setParsedText] = useState('');
@@ -12,12 +12,51 @@ const ProductTracker = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(true);
-  const [emailNotification, setEmailNotification] = useState({
-    email: '',
-    daysBeforeExpiry: 3,
-    enabled: false
-  });
-  const [emailSuccess, setEmailSuccess] = useState('');
+
+  // Check for products nearing expiry and send email alerts
+  useEffect(() => {
+    const checkExpiryAndSendEmails = async () => {
+      if (!emailNotification.enabled || !emailNotification.email) return;
+      
+      const today = new Date();
+      const productsNearingExpiry = products.filter(product => {
+        const expiryDate = new Date(product.expiry);
+        const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+        return daysUntilExpiry > 0 && daysUntilExpiry <= emailNotification.daysBeforeExpiry && !product.emailSent;
+      });
+      
+      if (productsNearingExpiry.length > 0) {
+        try {
+          await sendExpiryEmail({
+            email: emailNotification.email,
+            products: productsNearingExpiry,
+            daysBeforeExpiry: emailNotification.daysBeforeExpiry
+          });
+          
+          // Mark products as having had emails sent
+          const updatedProducts = products.map(product => {
+            if (productsNearingExpiry.some(p => p._id === product._id)) {
+              return { ...product, emailSent: true };
+            }
+            return product;
+          });
+          setProducts(updatedProducts);
+          
+          setEmailSuccess(`Expiry notification sent for ${productsNearingExpiry.length} product(s)`);
+          setTimeout(() => setEmailSuccess(''), 5000);
+        } catch (error) {
+          setError('Failed to send expiry notification email.');
+          setTimeout(() => setError(''), 5000);
+        }
+      }
+    };
+    
+    checkExpiryAndSendEmails();
+    
+    // Set up daily check for expiry emails
+    const intervalId = setInterval(checkExpiryAndSendEmails, 24 * 60 * 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, [products, emailNotification]);
 
   // Load products from API instead of localStorage
   useEffect(() => {
@@ -32,54 +71,9 @@ const ProductTracker = () => {
         setLoadingProducts(false);
       }
     };
-
+    
     loadProducts();
   }, []);
-
-  // Check for products nearing expiry and send email alerts
-  useEffect(() => {
-    const checkExpiryAndSendEmails = async () => {
-      if (!emailNotification.enabled || !emailNotification.email) return;
-
-      const today = new Date();
-      const productsNearingExpiry = products.filter(product => {
-        const expiryDate = new Date(product.expiry);
-        const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-        return daysUntilExpiry > 0 && daysUntilExpiry <= emailNotification.daysBeforeExpiry && !product.emailSent;
-      });
-
-      if (productsNearingExpiry.length > 0) {
-        try {
-          await sendExpiryEmail({
-            email: emailNotification.email,
-            products: productsNearingExpiry,
-            daysBeforeExpiry: emailNotification.daysBeforeExpiry
-          });
-
-          // Mark products as having had emails sent
-          const updatedProducts = products.map(product => {
-            if (productsNearingExpiry.some(p => p._id === product._id)) {
-              return { ...product, emailSent: true };
-            }
-            return product;
-          });
-          setProducts(updatedProducts);
-
-          setEmailSuccess(`Expiry notification sent for ${productsNearingExpiry.length} product(s)`);
-          setTimeout(() => setEmailSuccess(''), 5000);
-        } catch (error) {
-          setError('Failed to send expiry notification email.');
-          setTimeout(() => setError(''), 5000);
-        }
-      }
-    };
-
-    checkExpiryAndSendEmails();
-
-    // Set up daily check for expiry emails
-    const intervalId = setInterval(checkExpiryAndSendEmails, 24 * 60 * 60 * 1000);
-    return () => clearInterval(intervalId);
-  }, [products, emailNotification]);
 
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
@@ -102,7 +96,7 @@ const ProductTracker = () => {
       // OCR.Space API implementation
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('apikey', 'YOUR_OCRSPACE_API_KEY'); // Replace with your API key
+      formData.append('apikey', 'K85981005688957'); // Replace with your API key
       formData.append('language', 'eng');
       formData.append('isOverlayRequired', 'false');
       formData.append('detectOrientation', 'true');
@@ -115,7 +109,7 @@ const ProductTracker = () => {
       });
 
       const result = await response.json();
-
+      
       if (result.IsErroredOnProcessing) {
         throw new Error(result.ErrorMessage || 'OCR processing failed');
       }
@@ -123,7 +117,7 @@ const ProductTracker = () => {
       if (result.ParsedResults && result.ParsedResults.length > 0) {
         const parsedTextResult = result.ParsedResults[0].ParsedText;
         console.log('OCR Result:', parsedTextResult);
-
+        
         if (parsedTextResult) {
           setParsedText(parsedTextResult);
 
@@ -208,16 +202,15 @@ const ProductTracker = () => {
       const newProductData = {
         name: productName,
         expiry: expiryDate,
-        imageData,
-        emailSent: false  // Track if we've sent an email for this product
+        imageData
       };
 
       // Add product to backend
       const savedProduct = await addProduct(newProductData);
-
+      
       // Update local state
       setProducts(prevProducts => [...prevProducts, savedProduct]);
-
+      
       // Reset form
       setProductName('');
       setExpiryDate('');
@@ -236,49 +229,6 @@ const ProductTracker = () => {
       setProducts(products.filter(product => product._id !== id));
     } catch (error) {
       setError('Failed to delete product. Please try again.');
-    }
-  };
-
-  const sendManualExpiryEmail = async () => {
-    if (!emailNotification.email) {
-      setError('Please enter an email address for notifications.');
-      return;
-    }
-
-    try {
-      const today = new Date();
-      const productsToNotify = products.filter(product => {
-        const expiryDate = new Date(product.expiry);
-        const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-        return daysUntilExpiry <= emailNotification.daysBeforeExpiry && daysUntilExpiry > 0;
-      });
-
-      if (productsToNotify.length === 0) {
-        setEmailSuccess('No products are expiring soon.');
-        setTimeout(() => setEmailSuccess(''), 5000);
-        return;
-      }
-
-      await sendExpiryEmail({
-        email: emailNotification.email,
-        products: productsToNotify,
-        daysBeforeExpiry: emailNotification.daysBeforeExpiry
-      });
-
-      // Mark products as emailed
-      const updatedProducts = products.map(product => {
-        if (productsToNotify.some(p => p._id === product._id)) {
-          return { ...product, emailSent: true };
-        }
-        return product;
-      });
-      setProducts(updatedProducts);
-
-      setEmailSuccess(`Expiry notification sent for ${productsToNotify.length} product(s)`);
-      setTimeout(() => setEmailSuccess(''), 5000);
-    } catch (error) {
-      setError('Failed to send expiry notification email.');
-      setTimeout(() => setError(''), 5000);
     }
   };
 
@@ -445,7 +395,7 @@ const ProductTracker = () => {
             transition={{ duration: 0.5 }}
           >
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Tracked Products</h2>
-
+            
             {/* Loading State for Products */}
             {loadingProducts ? (
               <div className="flex justify-center py-8">
@@ -476,8 +426,8 @@ const ProductTracker = () => {
                       daysUntilExpiry <= 0
                         ? 'text-red-500'
                         : daysUntilExpiry <= 7
-                          ? 'text-yellow-500'
-                          : 'text-green-500';
+                        ? 'text-yellow-500'
+                        : 'text-green-500';
 
                     return (
                       <motion.li
@@ -486,8 +436,7 @@ const ProductTracker = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        transition={{
-                          duration: 0.3, delay: index * 0.1
+                        transition={{ duration: 0.3, delay: index * 0.1
                         }}
                       >
                         <div>
