@@ -14,49 +14,49 @@ const ProductTracker = () => {
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   // Check for products nearing expiry and send email alerts
-  useEffect(() => {
-    const checkExpiryAndSendEmails = async () => {
-      if (!emailNotification.enabled || !emailNotification.email) return;
+  // useEffect(() => {
+  //   const checkExpiryAndSendEmails = async () => {
+  //     if (!emailNotification.enabled || !emailNotification.email) return;
       
-      const today = new Date();
-      const productsNearingExpiry = products.filter(product => {
-        const expiryDate = new Date(product.expiry);
-        const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-        return daysUntilExpiry > 0 && daysUntilExpiry <= emailNotification.daysBeforeExpiry && !product.emailSent;
-      });
+  //     const today = new Date();
+  //     const productsNearingExpiry = products.filter(product => {
+  //       const expiryDate = new Date(product.expiry);
+  //       const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+  //       return daysUntilExpiry > 0 && daysUntilExpiry <= emailNotification.daysBeforeExpiry && !product.emailSent;
+  //     });
       
-      if (productsNearingExpiry.length > 0) {
-        try {
-          await sendExpiryEmail({
-            email: emailNotification.email,
-            products: productsNearingExpiry,
-            daysBeforeExpiry: emailNotification.daysBeforeExpiry
-          });
+  //     if (productsNearingExpiry.length > 0) {
+  //       try {
+  //         await sendExpiryEmail({
+  //           email: emailNotification.email,
+  //           products: productsNearingExpiry,
+  //           daysBeforeExpiry: emailNotification.daysBeforeExpiry
+  //         });
           
-          // Mark products as having had emails sent
-          const updatedProducts = products.map(product => {
-            if (productsNearingExpiry.some(p => p._id === product._id)) {
-              return { ...product, emailSent: true };
-            }
-            return product;
-          });
-          setProducts(updatedProducts);
+  //         // Mark products as having had emails sent
+  //         const updatedProducts = products.map(product => {
+  //           if (productsNearingExpiry.some(p => p._id === product._id)) {
+  //             return { ...product, emailSent: true };
+  //           }
+  //           return product;
+  //         });
+  //         setProducts(updatedProducts);
           
-          setEmailSuccess(`Expiry notification sent for ${productsNearingExpiry.length} product(s)`);
-          setTimeout(() => setEmailSuccess(''), 5000);
-        } catch (error) {
-          setError('Failed to send expiry notification email.');
-          setTimeout(() => setError(''), 5000);
-        }
-      }
-    };
+  //         setEmailSuccess(`Expiry notification sent for ${productsNearingExpiry.length} product(s)`);
+  //         setTimeout(() => setEmailSuccess(''), 5000);
+  //       } catch (error) {
+  //         setError('Failed to send expiry notification email.');
+  //         setTimeout(() => setError(''), 5000);
+  //       }
+  //     }
+  //   };
     
-    checkExpiryAndSendEmails();
+  //   checkExpiryAndSendEmails();
     
-    // Set up daily check for expiry emails
-    const intervalId = setInterval(checkExpiryAndSendEmails, 24 * 60 * 60 * 1000);
-    return () => clearInterval(intervalId);
-  }, [products, emailNotification]);
+  //   // Set up daily check for expiry emails
+  //   const intervalId = setInterval(checkExpiryAndSendEmails, 24 * 60 * 60 * 1000);
+  //   return () => clearInterval(intervalId);
+  // }, [products, emailNotification]);
 
   // Load products from API instead of localStorage
   useEffect(() => {
