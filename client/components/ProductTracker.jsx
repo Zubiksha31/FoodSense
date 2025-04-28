@@ -365,113 +365,76 @@ const ProductTracker = () => {
                 onChange={(e) => setProductName(e.target.value)}
                 className="bg-white/30 backdrop-blur-md border border-gray-200 p-3 rounded-xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
                 required
-              />
-              <input
-                type="date"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                className="bg-white/30 backdrop-blur-md border border-gray-200 p-3 rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
-                required
-              />
-
-              {/* Submit Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                type="submit"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-3 rounded-xl shadow-md font-medium transition-all duration-300"
-                disabled={loading}
-              >
-                Add Product
-              </motion.button>
-            </form>
-          </motion.div>
-
-          {/* Products List */}
-          <motion.div
-            className="bg-white/20 backdrop-blur-lg rounded-2xl shadow-lg p-6"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Tracked Products</h2>
-            
-            {/* Loading State for Products */}
-            {loadingProducts ? (
-              <div className="flex justify-center py-8">
-                <motion.div
-                  className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-200 border-t-indigo-600"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 />
-              </div>
-            ) : products.length === 0 ? (
-              <motion.div
-                className="flex flex-col items-center justify-center h-full text-center text-gray-500"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <svg className="w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <p>No products tracked yet.</p>
-              </motion.div>
-            ) : (
-              <ul className="space-y-4">
-                <AnimatePresence>
-                  {products.map((product, index) => {
-                    const daysUntilExpiry = getDaysUntilExpiry(product.expiry);
-                    const statusColor =
-                      daysUntilExpiry <= 0
-                        ? 'text-red-500'
-                        : daysUntilExpiry <= 7
-                        ? 'text-yellow-500'
-                        : 'text-green-500';
 
-                    return (
+                <input
+                  type="date"
+                  placeholder="Expiry Date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  className="bg-white/30 backdrop-blur-md border border-gray-200 p-3 rounded-xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
+                />
+  
+                <motion.button
+                  type="submit"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow-md transition-all duration-300"
+                >
+                  Add Product
+                </motion.button>
+              </form>
+            </motion.div>
+  
+            {/* Product List Section */}
+            <motion.div
+              className="bg-white/20 backdrop-blur-lg rounded-2xl shadow-lg p-6 overflow-y-auto"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Tracked Products</h2>
+              {loadingProducts ? (
+                <div className="text-indigo-600">Loading products...</div>
+              ) : products.length === 0 ? (
+                <div className="text-gray-500">No products added yet.</div>
+              ) : (
+                <ul className="flex flex-col gap-4">
+                  <AnimatePresence>
+                    {products.map(product => (
                       <motion.li
                         key={product._id}
-                        className="bg-white/30 backdrop-blur-md p-4 rounded-xl flex justify-between items-center shadow-sm"
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3, delay: index * 0.1
-                        }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="bg-white/40 backdrop-blur-md p-4 rounded-xl flex items-center justify-between shadow-md"
                       >
                         <div>
-                          <p className="text-gray-800 font-medium">{product.name}</p>
-                          <p className={`text-sm ${statusColor}`}>
-                            {daysUntilExpiry <= 0
-                              ? 'Expired'
-                              : `Expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}`}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(product.expiry).toLocaleDateString()}
-                          </p>
+                          <h3 className="font-semibold text-gray-700">{product.name}</h3>
+                          <p className="text-sm text-gray-500">Expires in {getDaysUntilExpiry(product.expiry)} days</p>
                         </div>
                         <motion.button
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => handleDelete(product._id)}
-                          className="text-red-500 hover:text-red-600"
+                          className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-sm transition-all duration-300"
                           aria-label="Delete product"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M9 7v12m6-12v12" />
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </motion.button>
                       </motion.li>
-                    );
-                  })}
-                </AnimatePresence>
-              </ul>
-            )}
-          </motion.div>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-export default ProductTracker;
+                    ))}
+                  </AnimatePresence>
+                </ul>
+              )}
+            </motion.div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+  
+  export default ProductTracker;
+  
